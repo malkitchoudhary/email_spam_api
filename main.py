@@ -1,3 +1,5 @@
+from fastapi.middleware.cors import CORSMiddleware
+
 from fastapi import FastAPI
 from pydantic import BaseModel
 import joblib
@@ -7,6 +9,14 @@ from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],   # frontend se request allow
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # Download nltk data only once
 nltk.download('punkt')

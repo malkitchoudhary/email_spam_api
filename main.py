@@ -78,17 +78,32 @@ def home():
 # -----------------------------
 @app.post("/predict")
 def predict(data: EmailInput):
-    # Preprocess
     transformed = transform_text(data.text)
     vector = tfidf.transform([transformed]).toarray()
 
-    # Predict
-    prediction = model.predict(vector)[0]
+    proba = model.predict_proba(vector)[0][1]
 
-    result = "SPAM" if prediction == 1 else "NOT SPAM"
+    # 🔥 STRONG SPAM KEYWORDS (override)
+    spam_keywords = [
+        "guaranteed", "cash reward", "reply yes", "urgent",
+        "winner", "claim now", "limited offer"
+    ]
+
+    text_lower = data.text.lower()
+
+    if any(keyword in text_lower for keyword in spam_keywords):
+        result = "SPAM"
+        prediction_id = 1
+    elif proba >= 0.6:
+        result = "SPAM"
+        prediction_id = 1
+    else:
+        result = "NOT SPAM"
+        prediction_id = 0
 
     return {
         "input": data.text,
         "prediction": result,
-        "prediction_id": int(prediction)
+        "spam_probability": round(proba, 2),
+        "prediction_id": prediction_id
     }

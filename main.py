@@ -1,4 +1,7 @@
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -19,8 +22,6 @@ app.add_middleware(
 
 
 # Download nltk data only once
-nltk.download('punkt')
-nltk.download('stopwords')
 
 ps = PorterStemmer()
 
@@ -68,9 +69,11 @@ class EmailInput(BaseModel):
 # -----------------------------
 # API Home Route
 # -----------------------------
-@app.get("/")
-def home():
-    return {"message": "Email Spam Detection API Working Successfully!"}
+@app.get("/", response_class=HTMLResponse)
+def serve_frontend():
+    with open("fronted/front.html", "r", encoding="utf-8") as f:
+        return f.read()
+
 
 
 # -----------------------------

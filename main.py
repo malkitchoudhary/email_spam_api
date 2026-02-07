@@ -4,10 +4,19 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 import joblib
-import nltk
+
 import string
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
+
+import os
+import nltk
+
+# 🔥 Tell NLTK where to store data (Render-compatible)
+NLTK_DATA_DIR = os.path.join(os.path.dirname(__file__), "nltk_data")
+os.makedirs(NLTK_DATA_DIR, exist_ok=True)
+nltk.data.path.append(NLTK_DATA_DIR)
+
 
 # ✅ CREATE APP ONLY ONCE
 app = FastAPI()
@@ -27,12 +36,13 @@ def download_nltk_data():
     try:
         nltk.data.find("tokenizers/punkt")
     except LookupError:
-        nltk.download("punkt")
+        nltk.download("punkt", download_dir=NLTK_DATA_DIR)
 
     try:
         nltk.data.find("corpora/stopwords")
     except LookupError:
-        nltk.download("stopwords")
+        nltk.download("stopwords", download_dir=NLTK_DATA_DIR)
+
 
 # -----------------------------
 # Load Model and Vectorizer

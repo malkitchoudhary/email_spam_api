@@ -17,8 +17,9 @@ from nltk.stem.porter import PorterStemmer
 # ============================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+
 # ============================
-# NLTK DATA PATH
+# NLTK DATA PATH (SAFE)
 # ============================
 NLTK_DATA_DIR = os.path.join(BASE_DIR, "nltk_data")
 os.makedirs(NLTK_DATA_DIR, exist_ok=True)
@@ -28,7 +29,7 @@ nltk.data.path.append(NLTK_DATA_DIR)
 # ============================
 # FASTAPI APP
 # ============================
-app = FastAPI()
+app = FastAPI(title="Email Spam Detection API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,19 +40,13 @@ app.add_middleware(
 
 
 # ============================
-# DOWNLOAD NLTK DATA (ON START)
-# ============================
-@app.on_event("startup")
-def download_nltk_data():
-    nltk.download("punkt", download_dir=NLTK_DATA_DIR)
-    nltk.download("stopwords", download_dir=NLTK_DATA_DIR)
-
-
-# ============================
 # LOAD MODEL & VECTORIZER
 # ============================
-model = joblib.load(os.path.join(BASE_DIR, "model", "spam_model.pkl"))
-tfidf = joblib.load(os.path.join(BASE_DIR, "model", "tfidf.pkl"))
+MODEL_PATH = os.path.join(BASE_DIR, "model", "spam_model.pkl")
+TFIDF_PATH = os.path.join(BASE_DIR, "model", "tfidf.pkl")
+
+model = joblib.load(MODEL_PATH)
+tfidf = joblib.load(TFIDF_PATH)
 
 ps = PorterStemmer()
 
@@ -61,8 +56,15 @@ ps = PorterStemmer()
 # ============================
 def transform_text(text: str) -> str:
     text = text.lower()
-    tokens = nltk.word_tokenize(text)
 
+    # word tokenize (safe)
+    try:
+        tokens = nltk.word_tokenize(text)
+    except LookupError:
+        nltk.download("punkt", download_dir=NLTK_DATA_DIR)
+        tokens = nltk.word_tokenize(text)
+
+    # stopwords (safe)
     try:
         stop_words = set(stopwords.words("english"))
     except LookupError:
@@ -91,7 +93,12 @@ class EmailInput(BaseModel):
 # ============================
 @app.get("/", response_class=HTMLResponse)
 def serve_frontend():
-    with open(os.path.join(BASE_DIR, "fronted", "front.html"), "r", encoding="utf-8") as f:
+    frontend_path = os.path.join(BASE_DIR, "front.html")
+
+    if not os.path.exists(frontend_path):
+        return "<h2>front.html file not found</h2>"
+
+    with open(frontend_path, "r", encoding="utf-8") as f:
         return f.read()
 
 

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Email Spam Checker</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+          integrity="sha512-..."
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer" />
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Segoe UI", sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1d2671, #c33764);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: #ffffff;
+            width: 420px;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        h1 {
+            color: #1d2671;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 130px;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            resize: none;
+            font-size: 14px;
+            outline: none;
+        }
+
+        textarea:focus {
+            border-color: #c33764;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 15px;
+            padding: 12px;
+            border: none;
+            border-radius: 25px;
+            background: linear-gradient(135deg, #1d2671, #c33764);
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            transform: scale(1.03);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 10px;
+            background: #f4f4f4;
+            font-size: 14px;
+            color: #333;
+            min-height: 40px;
+        }
+
+        .social-icons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .social-icons a {
+            width: 45px;
+            height: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            color: white;
+            font-size: 22px;
+            transition: 0.3s;
+            text-decoration: none;
+        }
+
+        .social-icons a:hover {
+            transform: scale(1.15);
+        }
+
+        .whatsapp {
+            background: #25D366;
+        }
+
+        .instagram {
+            background: linear-gradient(45deg, #f58529, #dd2a7b, #8134af);
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>Email Spam detection</h1>
+    <p class="subtitle">Check whether your email is Spam or Not</p>
+
+    <textarea id="emailText" placeholder="Paste your email message here..."></textarea>
+
+    <button id="checkBtn">Check Email</button>
+
+    <div class="result" id="resultBox">
+        Result will appear here
+    </div>
+
+    <div class="social-icons">
+        <a href="https://wa.me/919467266650" target="_blank" class="whatsapp">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+        <a href="https://www.instagram.com/monu__bhai__666" target="_blank" class="instagram">
+            <i class="fab fa-instagram"></i>
+        </a>
+    </div>
+</div>
+
+<script>
+const button = document.getElementById("checkBtn");
+const textarea = document.getElementById("emailText");
+const resultBox = document.getElementById("resultBox");
+
+button.addEventListener("click", async () => {
+    const text = textarea.value.trim();
+
+    if (!text) {
+        resultBox.innerHTML = "❌ Please enter an email message";
+        resultBox.style.color = "red";
+        return;
+    }
+
+    button.disabled = true;
+    resultBox.innerHTML = "⏳ Checking...";
+    resultBox.style.color = "#333";
+
+    try {
+        const response = await fetch("/predict", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ text })
+        });
+
+        if (!response.ok) {
+            throw new Error("Server error");
+        }
+
+        const data = await response.json();
+
+        if (data.prediction === "SPAM") {
+            resultBox.innerHTML =
+                `🚨 <b>SPAM EMAIL</b><br>Probability: ${data.spam_probability}`;
+            resultBox.style.color = "red";
+        } else {
+            resultBox.innerHTML =
+                `✅ <b>NOT SPAM</b><br>Probability: ${data.spam_probability}`;
+            resultBox.style.color = "green";
+        }
+
+    } catch (error) {
+        console.error(error);
+        resultBox.innerHTML = "❌ Server error. Please try again.";
+        resultBox.style.color = "red";
+    } finally {
+        button.disabled = false;
+    }
+});
+</script>
+
+</body>
+</html>

@@ -22,7 +22,7 @@ os.makedirs(NLTK_DATA_DIR, exist_ok=True)
 nltk.data.path.append(NLTK_DATA_DIR)
 
 
-# ==================================================
+# =================================================
 # FASTAPI APP (ONLY ONCE)
 # ==================================================
 app = FastAPI()

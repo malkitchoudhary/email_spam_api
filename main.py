@@ -12,9 +12,9 @@ from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 
 
-# ==================================================
-# NLTK DATA PATH (RENDER SAFE)
-# ==================================================
+# ============================
+# PATH SETUP (RENDER SAFE)
+# ============================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 NLTK_DATA_DIR = os.path.join(BASE_DIR, "nltk_data")
@@ -22,9 +22,9 @@ os.makedirs(NLTK_DATA_DIR, exist_ok=True)
 nltk.data.path.append(NLTK_DATA_DIR)
 
 
-# =================================================
-# FASTAPI APP (ONLY ONCE)
-# ==================================================
+# ============================
+# FASTAPI APP
+# ============================
 app = FastAPI()
 
 app.add_middleware(
@@ -35,88 +35,74 @@ app.add_middleware(
 )
 
 
-# ==================================================
-# NLTK DOWNLOAD ON STARTUP (ONE TIME)
-# ==================================================
+# ============================
+# DOWNLOAD NLTK DATA
+# ============================
 @app.on_event("startup")
 def download_nltk_data():
-    try:
-        nltk.data.find("tokenizers/punkt")
-    except LookupError:
-        nltk.download("punkt", download_dir=NLTK_DATA_DIR)
-
-    try:
-        nltk.data.find("corpora/stopwords")
-    except LookupError:
-        nltk.download("stopwords", download_dir=NLTK_DATA_DIR)
+    nltk.download("punkt", download_dir=NLTK_DATA_DIR)
+    nltk.download("stopwords", download_dir=NLTK_DATA_DIR)
 
 
-# ==================================================
-# LOAD MODEL & VECTORIZER
-# ==================================================
+# ============================
+# LOAD MODEL
+# ============================
 model = joblib.load(os.path.join(BASE_DIR, "model", "spam_model.pkl"))
 tfidf = joblib.load(os.path.join(BASE_DIR, "model", "tfidf.pkl"))
 
 ps = PorterStemmer()
-STOPWORDS = set(stopwords.words("english"))
 
 
-# ==================================================
+# ============================
 # TEXT PREPROCESSING
-# ==================================================
+# ============================
 def transform_text(text: str) -> str:
     text = text.lower()
     tokens = nltk.word_tokenize(text)
 
+    stop_words = set(stopwords.words("english"))  # ✅ SAFE HERE
+
     cleaned = []
     for word in tokens:
-        if word.isalnum() and word not in STOPWORDS:
+        if word.isalnum() and word not in stop_words:
             cleaned.append(ps.stem(word))
 
     return " ".join(cleaned)
 
 
-# ==================================================
-# REQUEST SCHEMA
-# ==================================================
+# ============================
+# REQUEST MODEL
+# ============================
 class EmailInput(BaseModel):
     text: str
 
 
-# ==================================================
-# FRONTEND ROUTE
-# ==================================================
+# ============================
+# FRONTEND
+# ============================
 @app.get("/", response_class=HTMLResponse)
 def serve_frontend():
     with open(os.path.join(BASE_DIR, "fronted", "front.html"), "r", encoding="utf-8") as f:
         return f.read()
 
 
-# ==================================================
-# PREDICTION ROUTE (CRASH-PROOF)
-# ==================================================
+# ============================
+# PREDICT
+# ============================
 @app.post("/predict")
 def predict(data: EmailInput):
     transformed = transform_text(data.text)
     vector = tfidf.transform([transformed]).toarray()
 
-    # 🔒 SAFE probability handling
     if hasattr(model, "predict_proba"):
         proba = model.predict_proba(vector)[0][1]
     else:
-        pred = model.predict(vector)[0]
-        proba = float(pred)
+        proba = float(model.predict(vector)[0])
 
     spam_keywords = [
-        "urgent",
-        "winner",
-        "cash",
-        "reward",
-        "guaranteed",
-        "claim",
-        "reply yes",
-        "call now",
-        "limited offer",
+        "urgent", "winner", "cash", "reward",
+        "guaranteed", "claim", "reply yes",
+        "call now", "limited offer"
     ]
 
     text_lower = data.text.lower()
@@ -127,9 +113,9 @@ def predict(data: EmailInput):
             "spam_probability": round(proba, 2),
             "prediction_id": 1,
         }
-    else:
-        return {
-            "prediction": "NOT SPAM",
-            "spam_probability": round(proba, 2),
-            "prediction_id": 0,
-        }
+
+    return {
+        "prediction": "NOT SPAM",
+        "spam_probability": round(proba, 2),
+        "prediction_id": 0,
+    }

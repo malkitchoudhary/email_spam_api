@@ -3,34 +3,41 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-import joblib
-
+import os
 import string
+import joblib
+import nltk
+
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 
-import os
-import nltk
 
-# 🔥 Tell NLTK where to store data (Render-compatible)
-NLTK_DATA_DIR = os.path.join(os.path.dirname(__file__), "nltk_data")
+# ==================================================
+# NLTK DATA PATH (RENDER SAFE)
+# ==================================================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+NLTK_DATA_DIR = os.path.join(BASE_DIR, "nltk_data")
 os.makedirs(NLTK_DATA_DIR, exist_ok=True)
 nltk.data.path.append(NLTK_DATA_DIR)
 
 
-# ✅ CREATE APP ONLY ONCE
+# ==================================================
+# FASTAPI APP (ONLY ONCE)
+# ==================================================
 app = FastAPI()
 
-# ✅ CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ✅ NLTK DOWNLOAD ON STARTUP (PRODUCTION SAFE)
+
+# ==================================================
+# NLTK DOWNLOAD ON STARTUP (ONE TIME)
+# ==================================================
 @app.on_event("startup")
 def download_nltk_data():
     try:
@@ -44,76 +51,85 @@ def download_nltk_data():
         nltk.download("stopwords", download_dir=NLTK_DATA_DIR)
 
 
-# -----------------------------
-# Load Model and Vectorizer
-# -----------------------------
-model = joblib.load("model/spam_model.pkl")
-tfidf = joblib.load("model/tfidf.pkl")
+# ==================================================
+# LOAD MODEL & VECTORIZER
+# ==================================================
+model = joblib.load(os.path.join(BASE_DIR, "model", "spam_model.pkl"))
+tfidf = joblib.load(os.path.join(BASE_DIR, "model", "tfidf.pkl"))
 
 ps = PorterStemmer()
+STOPWORDS = set(stopwords.words("english"))
 
-# -----------------------------
-# Text Preprocessing
-# -----------------------------
+
+# ==================================================
+# TEXT PREPROCESSING
+# ==================================================
 def transform_text(text: str) -> str:
     text = text.lower()
     tokens = nltk.word_tokenize(text)
 
-    tokens = [i for i in tokens if i.isalnum()]
-    tokens = [
-        ps.stem(i)
-        for i in tokens
-        if i not in stopwords.words("english")
-        and i not in string.punctuation
-    ]
+    cleaned = []
+    for word in tokens:
+        if word.isalnum() and word not in STOPWORDS:
+            cleaned.append(ps.stem(word))
 
-    return " ".join(tokens)
+    return " ".join(cleaned)
 
-# -----------------------------
-# Request Model
-# -----------------------------
+
+# ==================================================
+# REQUEST SCHEMA
+# ==================================================
 class EmailInput(BaseModel):
     text: str
 
-# -----------------------------
-# Frontend Route
-# -----------------------------
+
+# ==================================================
+# FRONTEND ROUTE
+# ==================================================
 @app.get("/", response_class=HTMLResponse)
 def serve_frontend():
-    with open("fronted/front.html", "r", encoding="utf-8") as f:
+    with open(os.path.join(BASE_DIR, "fronted", "front.html"), "r", encoding="utf-8") as f:
         return f.read()
 
-# -----------------------------
-# Prediction Endpoint
-# -----------------------------
+
+# ==================================================
+# PREDICTION ROUTE (CRASH-PROOF)
+# ==================================================
 @app.post("/predict")
 def predict(data: EmailInput):
     transformed = transform_text(data.text)
     vector = tfidf.transform([transformed]).toarray()
-    proba = model.predict_proba(vector)[0][1]
+
+    # 🔒 SAFE probability handling
+    if hasattr(model, "predict_proba"):
+        proba = model.predict_proba(vector)[0][1]
+    else:
+        pred = model.predict(vector)[0]
+        proba = float(pred)
 
     spam_keywords = [
-        "guaranteed",
-        "cash reward",
-        "reply yes",
         "urgent",
         "winner",
-        "claim now",
-        "limited offer",
+        "cash",
+        "reward",
+        "guaranteed",
+        "claim",
+        "reply yes",
         "call now",
+        "limited offer",
     ]
 
     text_lower = data.text.lower()
 
     if any(k in text_lower for k in spam_keywords) or proba >= 0.6:
-        result = "SPAM"
-        prediction_id = 1
+        return {
+            "prediction": "SPAM",
+            "spam_probability": round(proba, 2),
+            "prediction_id": 1,
+        }
     else:
-        result = "NOT SPAM"
-        prediction_id = 0
-
-    return {
-        "prediction": result,
-        "spam_probability": round(proba, 2),
-        "prediction_id": prediction_id,
-    }
+        return {
+            "prediction": "NOT SPAM",
+            "spam_probability": round(proba, 2),
+            "prediction_id": 0,
+        }

@@ -13,10 +13,13 @@ from nltk.stem.porter import PorterStemmer
 
 
 # ============================
-# PATH SETUP (RENDER SAFE)
+# BASE PATH (RENDER SAFE)
 # ============================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# ============================
+# NLTK DATA PATH
+# ============================
 NLTK_DATA_DIR = os.path.join(BASE_DIR, "nltk_data")
 os.makedirs(NLTK_DATA_DIR, exist_ok=True)
 nltk.data.path.append(NLTK_DATA_DIR)
@@ -36,7 +39,7 @@ app.add_middleware(
 
 
 # ============================
-# DOWNLOAD NLTK DATA
+# DOWNLOAD NLTK DATA (ON START)
 # ============================
 @app.on_event("startup")
 def download_nltk_data():
@@ -45,7 +48,7 @@ def download_nltk_data():
 
 
 # ============================
-# LOAD MODEL
+# LOAD MODEL & VECTORIZER
 # ============================
 model = joblib.load(os.path.join(BASE_DIR, "model", "spam_model.pkl"))
 tfidf = joblib.load(os.path.join(BASE_DIR, "model", "tfidf.pkl"))
@@ -60,14 +63,20 @@ def transform_text(text: str) -> str:
     text = text.lower()
     tokens = nltk.word_tokenize(text)
 
-    stop_words = set(stopwords.words("english"))  # ✅ SAFE HERE
+    try:
+        stop_words = set(stopwords.words("english"))
+    except LookupError:
+        nltk.download("stopwords", download_dir=NLTK_DATA_DIR)
+        stop_words = set(stopwords.words("english"))
 
-    cleaned = []
-    for word in tokens:
-        if word.isalnum() and word not in stop_words:
-            cleaned.append(ps.stem(word))
+    tokens = [i for i in tokens if i.isalnum()]
+    tokens = [
+        ps.stem(i)
+        for i in tokens
+        if i not in stop_words and i not in string.punctuation
+    ]
 
-    return " ".join(cleaned)
+    return " ".join(tokens)
 
 
 # ============================
@@ -78,7 +87,7 @@ class EmailInput(BaseModel):
 
 
 # ============================
-# FRONTEND
+# FRONTEND ROUTE
 # ============================
 @app.get("/", response_class=HTMLResponse)
 def serve_frontend():
@@ -87,7 +96,7 @@ def serve_frontend():
 
 
 # ============================
-# PREDICT
+# PREDICTION ROUTE
 # ============================
 @app.post("/predict")
 def predict(data: EmailInput):
@@ -111,11 +120,11 @@ def predict(data: EmailInput):
         return {
             "prediction": "SPAM",
             "spam_probability": round(proba, 2),
-            "prediction_id": 1,
+            "prediction_id": 1
         }
 
     return {
         "prediction": "NOT SPAM",
         "spam_probability": round(proba, 2),
-        "prediction_id": 0,
+        "prediction_id": 0
     }

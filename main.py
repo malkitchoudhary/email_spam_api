@@ -47,10 +47,12 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event():
     nltk.download("punkt", download_dir=NLTK_DATA_DIR)
+    nltk.download("punkt_tab", download_dir=NLTK_DATA_DIR)
     nltk.download("stopwords", download_dir=NLTK_DATA_DIR)
 
     global stop_words
     stop_words = set(stopwords.words("english"))
+
 
 
 # =========================

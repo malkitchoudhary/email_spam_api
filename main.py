@@ -12,22 +12,25 @@ from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 
 
-# ============================
-# BASE DIRECTORY
-# ============================
+# =========================
+# BASE DIR
+# =========================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# ============================
-# NLTK DATA SETUP
-# ============================
+# =========================
+# NLTK SETUP
+# =========================
 NLTK_DATA_DIR = os.path.join(BASE_DIR, "nltk_data")
 os.makedirs(NLTK_DATA_DIR, exist_ok=True)
 nltk.data.path.append(NLTK_DATA_DIR)
 
+ps = PorterStemmer()
+stop_words = set()
 
-# ============================
+
+# =========================
 # FASTAPI APP
-# ============================
+# =========================
 app = FastAPI(title="Email Spam Detector")
 
 app.add_middleware(
@@ -38,31 +41,31 @@ app.add_middleware(
 )
 
 
-# ============================
-# DOWNLOAD NLTK DATA
-# ============================
+# =========================
+# STARTUP: DOWNLOAD NLTK
+# =========================
 @app.on_event("startup")
-def download_nltk():
+def startup_event():
     nltk.download("punkt", download_dir=NLTK_DATA_DIR)
     nltk.download("stopwords", download_dir=NLTK_DATA_DIR)
 
+    global stop_words
+    stop_words = set(stopwords.words("english"))
 
-# ============================
-# LOAD MODEL & TFIDF
-# ============================
+
+# =========================
+# LOAD MODEL
+# =========================
 MODEL_PATH = os.path.join(BASE_DIR, "model", "spam_model.pkl")
 TFIDF_PATH = os.path.join(BASE_DIR, "model", "tfidf.pkl")
 
 model = joblib.load(MODEL_PATH)
 tfidf = joblib.load(TFIDF_PATH)
 
-ps = PorterStemmer()
-stop_words = set(stopwords.words("english"))
 
-
-# ============================
-# TEXT PREPROCESSING
-# ============================
+# =========================
+# TEXT CLEANING
+# =========================
 def transform_text(text: str) -> str:
     text = text.lower()
     tokens = nltk.word_tokenize(text)
@@ -77,31 +80,31 @@ def transform_text(text: str) -> str:
     return " ".join(tokens)
 
 
-# ============================
-# REQUEST SCHEMA
-# ============================
+# =========================
+# SCHEMA
+# =========================
 class EmailInput(BaseModel):
     text: str
 
 
-# ============================
-# FRONTEND ROUTE
-# ============================
+# =========================
+# FRONTEND
+# =========================
 @app.get("/", response_class=HTMLResponse)
-def serve_frontend():
+def home():
     with open(os.path.join(BASE_DIR, "front.html"), encoding="utf-8") as f:
         return f.read()
 
 
-# ============================
-# PREDICTION ROUTE
-# ============================
+# =========================
+# PREDICT API
+# =========================
 @app.post("/predict")
 def predict(data: EmailInput):
     if not data.text.strip():
         return JSONResponse(
             status_code=400,
-            content={"error": "Empty email text"},
+            content={"error": "Empty email"},
         )
 
     processed = transform_text(data.text)
@@ -112,9 +115,9 @@ def predict(data: EmailInput):
     else:
         spam_prob = float(model.predict(vector)[0])
 
-    prediction = "SPAM" if spam_prob >= 0.5 else "NOT SPAM"
+    result = "SPAM" if spam_prob >= 0.5 else "NOT SPAM"
 
     return {
-        "prediction": prediction,
+        "prediction": result,
         "spam_probability": round(spam_prob, 2),
     }

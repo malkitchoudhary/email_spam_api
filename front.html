@@ -1,80 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Email Spam Checker</title>
+<meta charset="UTF-8">
+<title>Email Spam Checker</title>
 
-    <style>
-        body {
-            background: linear-gradient(135deg, #1d2671, #c33764);
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-
-        .box {
-            background: white;
-            width: 420px;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        }
-
-        h2 {
-            color: #1d2671;
-            margin-bottom: 10px;
-        }
-
-        textarea {
-            width: 100%;
-            height: 130px;
-            padding: 10px;
-            border-radius: 10px;
-            border: 1px solid #ccc;
-            resize: none;
-            outline: none;
-        }
-
-        button {
-            width: 100%;
-            margin-top: 15px;
-            padding: 12px;
-            border-radius: 25px;
-            border: none;
-            background: linear-gradient(135deg, #1d2671, #c33764);
-            color: white;
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        .result {
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 10px;
-            background: #f4f4f4;
-            font-weight: bold;
-        }
-    </style>
+<style>
+body {
+    background: linear-gradient(135deg, #1d2671, #c33764);
+    font-family: Arial;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+.box {
+    background: white;
+    width: 420px;
+    padding: 25px;
+    border-radius: 15px;
+    text-align: center;
+}
+textarea {
+    width: 100%;
+    height: 130px;
+    padding: 10px;
+}
+button {
+    width: 100%;
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 25px;
+    border: none;
+    background: linear-gradient(135deg, #1d2671, #c33764);
+    color: white;
+    cursor: pointer;
+}
+.result {
+    margin-top: 15px;
+    font-weight: bold;
+}
+</style>
 </head>
-<body>
 
+<body>
 <div class="box">
-    <h2>Email Spam detection</h2>
-    <textarea id="emailText" placeholder="Paste your email here..."></textarea>
+    <h2>Email Spam Detection</h2>
+    <textarea id="emailText" placeholder="Paste email here..."></textarea>
     <button onclick="checkSpam()">Check Email</button>
-    <div id="result" class="result">Result will appear here</div>
+    <div id="result" class="result"></div>
 </div>
 
 <script>
 async function checkSpam() {
-    const text = document.getElementById("emailText").value.trim();
+    const text = document.getElementById("emailText").value;
     const result = document.getElementById("result");
 
-    if (!text) {
-        result.innerText = "❌ Please enter email text";
+    if (!text.trim()) {
+        result.innerText = "❌ Please enter text";
         result.style.color = "red";
         return;
     }
@@ -85,7 +67,7 @@ async function checkSpam() {
     try {
         const res = await fetch("/predict", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ text })
         });
 
@@ -99,12 +81,11 @@ async function checkSpam() {
             result.style.color = "green";
         }
 
-    } catch (err) {
+    } catch {
         result.innerText = "❌ Server error";
         result.style.color = "red";
     }
 }
 </script>
-
 </body>
 </html>

@@ -46,7 +46,8 @@ def transform_text(text):
 # -----------------------------
 # LOAD DATA
 # -----------------------------
-df = pd.read_csv("data/spam.csv", encoding="latin1")
+df = pd.read_csv("spam.csv", encoding="latin1")
+
 df = df.rename(columns={"v1": "target", "v2": "text"})
 df = df[["text", "target"]]
 

@@ -4,6 +4,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
 import os
+import re
 import string
 import joblib
 import nltk
@@ -25,7 +26,17 @@ os.makedirs(NLTK_DATA_DIR, exist_ok=True)
 nltk.data.path.append(NLTK_DATA_DIR)
 
 ps = PorterStemmer()
-stop_words = set()
+FALLBACK_STOP_WORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "has",
+    "he", "in", "is", "it", "its", "of", "on", "or", "that", "the", "to",
+    "was", "were", "will", "with", "you", "your", "we", "our", "this", "i",
+    "me", "my", "they", "them", "their", "have", "had", "do", "does", "did",
+}
+
+try:
+    stop_words = set(stopwords.words("english"))
+except LookupError:
+    stop_words = FALLBACK_STOP_WORDS
 
 
 # =========================
@@ -39,20 +50,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# =========================
-# STARTUP: DOWNLOAD NLTK
-# =========================
-@app.on_event("startup")
-def startup_event():
-    nltk.download("punkt", download_dir=NLTK_DATA_DIR)
-    nltk.download("punkt_tab", download_dir=NLTK_DATA_DIR)
-    nltk.download("stopwords", download_dir=NLTK_DATA_DIR)
-
-    global stop_words
-    stop_words = set(stopwords.words("english"))
-
 
 
 # =========================
@@ -70,9 +67,8 @@ tfidf = joblib.load(TFIDF_PATH)
 # =========================
 def transform_text(text: str) -> str:
     text = text.lower()
-    tokens = nltk.word_tokenize(text)
+    tokens = re.findall(r"[a-z0-9]+", text)
 
-    tokens = [t for t in tokens if t.isalnum()]
     tokens = [
         ps.stem(t)
         for t in tokens

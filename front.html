@@ -2,90 +2,731 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Email Spam Checker</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spam Email Detection</title>
 <style>
+:root {
+    --bg: #020d1d;
+    --panel: rgba(4, 29, 57, 0.78);
+    --panel-strong: rgba(6, 38, 74, 0.92);
+    --cyan: #22c7ff;
+    --cyan-soft: #8ee8ff;
+    --blue: #168fff;
+    --red: #ff565d;
+    --text: #d7edff;
+    --muted: #84a7c5;
+    --line: rgba(55, 186, 255, 0.18);
+}
+
+* {
+    box-sizing: border-box;
+}
+
 body {
-    background: linear-gradient(135deg, #1d2671, #c33764);
-    font-family: Arial;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+    min-height: 100vh;
+    margin: 0;
+    background:
+        radial-gradient(circle at 23% 45%, rgba(25, 175, 255, 0.22), transparent 20%),
+        radial-gradient(circle at 80% 22%, rgba(255, 76, 91, 0.13), transparent 18%),
+        linear-gradient(135deg, #010714 0%, #021428 46%, #000813 100%);
+    color: var(--text);
+    font-family: Arial, Helvetica, sans-serif;
+    overflow-x: hidden;
 }
-.box {
-    background: white;
-    width: 420px;
-    padding: 25px;
-    border-radius: 15px;
-    text-align: center;
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(rgba(50, 170, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(50, 170, 255, 0.04) 1px, transparent 1px);
+    background-size: 86px 86px;
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent 86%);
 }
+
+.page {
+    width: min(1180px, calc(100% - 32px));
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 30px 0 16px;
+}
+
+.title {
+    margin: 0 0 28px;
+    font-size: clamp(42px, 6vw, 72px);
+    line-height: 0.95;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    text-shadow: 0 0 24px rgba(34, 199, 255, 0.3);
+}
+
+.title span:first-child {
+    color: var(--cyan);
+}
+
+.title span:last-child {
+    color: var(--red);
+}
+
+.layout {
+    display: grid;
+    grid-template-columns: 0.9fr 1.25fr 0.8fr;
+    gap: 18px;
+    align-items: stretch;
+}
+
+.scene {
+    position: relative;
+    min-height: 420px;
+}
+
+.beam {
+    position: absolute;
+    left: -70px;
+    bottom: 156px;
+    width: 250px;
+    height: 120px;
+    border-top: 2px solid rgba(34, 199, 255, 0.38);
+    border-radius: 50%;
+    transform: rotate(9deg);
+}
+
+.mail {
+    position: absolute;
+    width: 88px;
+    height: 58px;
+    border: 3px solid rgba(34, 199, 255, 0.78);
+    border-radius: 8px;
+    box-shadow: 0 0 22px rgba(34, 199, 255, 0.42);
+}
+
+.mail::before,
+.mail::after {
+    content: "";
+    position: absolute;
+    top: 10px;
+    width: 58px;
+    height: 3px;
+    background: rgba(142, 232, 255, 0.85);
+}
+
+.mail::before {
+    left: -4px;
+    transform: rotate(32deg);
+    transform-origin: left center;
+}
+
+.mail::after {
+    right: -4px;
+    transform: rotate(-32deg);
+    transform-origin: right center;
+}
+
+.mail.one {
+    top: 56px;
+    left: 40px;
+    transform: rotate(10deg);
+}
+
+.mail.two {
+    top: 176px;
+    left: 16px;
+    transform: scale(0.72) rotate(5deg);
+}
+
+.mail.three {
+    top: 170px;
+    left: 140px;
+    transform: rotate(12deg);
+}
+
+.mail.four {
+    top: 278px;
+    left: 76px;
+    transform: scale(1.08) rotate(8deg);
+}
+
+.shield-box {
+    position: absolute;
+    left: 118px;
+    bottom: 28px;
+    width: 148px;
+    height: 178px;
+    border: 2px solid rgba(34, 199, 255, 0.7);
+    border-radius: 20px;
+    background: linear-gradient(145deg, rgba(12, 119, 178, 0.65), rgba(5, 34, 74, 0.9));
+    box-shadow: 0 0 34px rgba(34, 199, 255, 0.35), inset 0 0 22px rgba(142, 232, 255, 0.12);
+}
+
+.shield-box::before {
+    content: "";
+    position: absolute;
+    inset: 16px;
+    border: 1px solid rgba(142, 232, 255, 0.28);
+    border-radius: 14px;
+}
+
+.shield {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 72px;
+    height: 82px;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(180deg, rgba(80, 226, 255, 0.95), rgba(12, 115, 205, 0.8));
+    clip-path: polygon(50% 0, 92% 18%, 84% 70%, 50% 100%, 16% 70%, 8% 18%);
+}
+
+.shield::after {
+    content: "";
+    position: absolute;
+    left: 22px;
+    top: 26px;
+    width: 26px;
+    height: 42px;
+    border-right: 5px solid #bff8ff;
+    border-bottom: 5px solid #bff8ff;
+    transform: rotate(38deg);
+}
+
+.panel {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    box-shadow: 0 0 34px rgba(0, 145, 255, 0.12), inset 0 0 22px rgba(0, 130, 255, 0.08);
+}
+
+.control-panel {
+    padding: 24px;
+}
+
+.input-row {
+    display: grid;
+    grid-template-columns: 1fr 158px;
+    gap: 18px;
+    align-items: end;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(55, 186, 255, 0.12);
+}
+
+label,
+.section-title {
+    display: block;
+    margin: 0 0 10px;
+    color: var(--cyan-soft);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
 textarea {
     width: 100%;
-    height: 130px;
-    padding: 10px;
+    min-height: 62px;
+    resize: vertical;
+    border: 1px solid rgba(55, 186, 255, 0.14);
+    border-radius: 7px;
+    padding: 15px 16px;
+    background: rgba(3, 23, 48, 0.88);
+    color: var(--text);
+    font: inherit;
+    line-height: 1.45;
+    outline: none;
 }
+
+textarea:focus {
+    border-color: rgba(34, 199, 255, 0.65);
+    box-shadow: 0 0 0 3px rgba(34, 199, 255, 0.12);
+}
+
 button {
     width: 100%;
-    margin-top: 15px;
-    padding: 12px;
-    border-radius: 25px;
-    border: none;
-    background: linear-gradient(135deg, #1d2671, #c33764);
-    color: white;
+    min-height: 56px;
+    border: 1px solid rgba(34, 199, 255, 0.26);
+    border-radius: 7px;
+    background: linear-gradient(180deg, rgba(5, 60, 112, 0.86), rgba(2, 29, 62, 0.94));
+    color: #bfefff;
+    font-size: 23px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
     cursor: pointer;
 }
-.result {
-    margin-top: 15px;
-    font-weight: bold;
+
+button:hover {
+    color: white;
+    border-color: rgba(34, 199, 255, 0.8);
+    box-shadow: 0 0 24px rgba(34, 199, 255, 0.18);
+}
+
+button:disabled {
+    cursor: wait;
+    opacity: 0.72;
+}
+
+.classification {
+    display: grid;
+    grid-template-columns: 1fr 168px;
+    gap: 22px;
+    padding: 18px 0 20px;
+}
+
+.bars {
+    padding-top: 14px;
+}
+
+.bar {
+    display: grid;
+    grid-template-columns: 1fr 54px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.track {
+    height: 18px;
+    overflow: hidden;
+    border-radius: 4px;
+    background: rgba(4, 21, 43, 0.9);
+}
+
+.fill {
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+    transition: width 0.35s ease;
+}
+
+.fill.ham {
+    background: linear-gradient(90deg, #1b8fff, #26d5ff);
+}
+
+.fill.spam {
+    background: linear-gradient(90deg, #ff6267, #b82e39);
+}
+
+.bar-value {
+    color: var(--cyan);
+    font-size: 22px;
+}
+
+.spam-value {
+    color: var(--red);
+}
+
+.metric-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 26px;
+    margin-top: 16px;
+}
+
+.metric-label {
+    color: #c6d9ea;
+    font-size: 18px;
+}
+
+.metric-number {
+    margin-top: 6px;
+    color: var(--cyan);
+    font-size: 34px;
+    line-height: 1;
+}
+
+.gauge {
+    padding: 18px 14px 14px;
+}
+
+.gauge-title {
+    margin-bottom: 18px;
+    color: #c9ddeb;
+    font-size: 16px;
+}
+
+.curve {
+    width: 100%;
+    height: 92px;
+}
+
+.curve path {
+    fill: none;
+    stroke-width: 4;
+    stroke-linecap: round;
+}
+
+.curve .spam-line {
+    stroke: var(--red);
+}
+
+.curve .ham-line {
+    stroke: var(--blue);
+}
+
+.curve-fill {
+    fill: url(#curveFill);
+}
+
+.gauge-labels {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.cta {
+    display: flex;
+    justify-content: center;
+    padding: 18px 0 0;
+    border-top: 1px solid rgba(55, 186, 255, 0.1);
+}
+
+.cta button {
+    width: min(235px, 100%);
+    background: linear-gradient(180deg, #159dff, #075aa8);
+    color: #eef9ff;
+}
+
+.analysis-panel {
+    padding: 24px 22px;
+    background: rgba(4, 24, 50, 0.72);
+}
+
+.sample {
+    min-height: 92px;
+    margin-top: 14px;
+    padding: 15px;
+    border: 1px solid rgba(55, 186, 255, 0.12);
+    border-radius: 7px;
+    background: rgba(2, 20, 42, 0.64);
+    color: #cfe6f8;
+    line-height: 1.45;
+}
+
+.sample strong {
+    color: var(--red);
+}
+
+.signal {
+    margin: 16px 0;
+}
+
+.signal-line {
+    height: 4px;
+    margin: 11px 0;
+    border-radius: 999px;
+    background: rgba(28, 122, 180, 0.18);
+}
+
+.signal-line:nth-child(2) {
+    width: 86%;
+}
+
+.signal-line:nth-child(3) {
+    width: 74%;
+}
+
+.signal-line:nth-child(4) {
+    width: 92%;
+}
+
+.snippet {
+    min-height: 78px;
+    padding: 16px;
+    border: 1px solid rgba(55, 186, 255, 0.12);
+    border-radius: 7px;
+    background: rgba(2, 20, 42, 0.55);
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.confidence {
+    margin-top: 22px;
+}
+
+.confidence .track {
+    height: 9px;
+    margin-top: 16px;
+}
+
+.confidence-value {
+    margin-top: 8px;
+    text-align: right;
+    color: #9bd8ff;
+    font-size: 22px;
+}
+
+.status {
+    min-height: 24px;
+    margin-top: 10px;
+    color: var(--muted);
+}
+
+.footer {
+    margin-top: 14px;
+    color: var(--cyan);
+    font-size: 16px;
+    text-align: right;
+    text-shadow: 0 0 14px rgba(34, 199, 255, 0.35);
+}
+
+.status.error {
+    color: var(--red);
+}
+
+.result-word {
+    color: var(--cyan);
+}
+
+.result-word.spam {
+    color: var(--red);
+}
+
+@media (max-width: 980px) {
+    .page {
+        padding-top: 28px;
+    }
+
+    .layout {
+        grid-template-columns: 1fr;
+    }
+
+    .scene {
+        min-height: 310px;
+        order: 2;
+    }
+
+    .analysis-panel {
+        order: 3;
+    }
+
+    .title {
+        margin-bottom: 24px;
+    }
+}
+
+@media (max-width: 640px) {
+    .page {
+        width: min(100% - 22px, 1180px);
+    }
+
+    .input-row,
+    .classification {
+        grid-template-columns: 1fr;
+    }
+
+    .control-panel,
+    .analysis-panel {
+        padding: 22px;
+    }
+
+    button {
+        font-size: 20px;
+    }
 }
 </style>
 </head>
-
 <body>
-<div class="box">
-    <h2>Email Spam Detection</h2>
-    <textarea id="emailText" placeholder="Paste email here..."></textarea>
-    <button onclick="checkSpam()">Check Email</button>
-    <div id="result" class="result"></div>
-</div>
+<main class="page">
+    <h1 class="title"><span>Spam Email</span> <span>Detection</span></h1>
+
+    <section class="layout">
+        <div class="scene" aria-hidden="true">
+            <div class="beam"></div>
+            <div class="mail one"></div>
+            <div class="mail two"></div>
+            <div class="mail three"></div>
+            <div class="mail four"></div>
+            <div class="shield-box"><div class="shield"></div></div>
+        </div>
+
+        <section class="panel control-panel">
+            <div class="input-row">
+                <div>
+                    <label for="emailText">Email Inbox</label>
+                    <textarea id="emailText" placeholder="Congratulations, you have won a free gift!">Congratulations, you have won a free gift!</textarea>
+                </div>
+                <button id="classifyBtn" type="button">Classify</button>
+            </div>
+
+            <div class="classification">
+                <div>
+                    <p class="section-title">Real-Time Email Classification</p>
+                    <div class="bars">
+                        <div class="bar">
+                            <div class="track"><div id="hamFill" class="fill ham"></div></div>
+                            <div id="hamValue" class="bar-value">0</div>
+                        </div>
+                        <div class="bar">
+                            <div class="track"><div id="spamFill" class="fill spam"></div></div>
+                            <div id="spamValue" class="bar-value spam-value">0</div>
+                        </div>
+                    </div>
+
+                    <div class="metric-row">
+                        <div>
+                            <div class="metric-label">Result</div>
+                            <div id="predictionText" class="metric-number result-word">Ready</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">Confidence</div>
+                            <div id="confidenceText" class="metric-number">0%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel gauge">
+                    <div class="gauge-title">Mean probability</div>
+                    <svg class="curve" viewBox="0 0 180 110" role="img" aria-label="Prediction probability curve">
+                        <defs>
+                            <linearGradient id="curveFill" x1="0" x2="1" y1="0" y2="1">
+                                <stop offset="0" stop-color="#ff565d" stop-opacity="0.42"></stop>
+                                <stop offset="1" stop-color="#168fff" stop-opacity="0.25"></stop>
+                            </linearGradient>
+                        </defs>
+                        <path class="curve-fill" d="M6,96 C44,83 54,18 80,20 C108,23 112,85 174,88 L174,105 L6,105 Z"></path>
+                        <path class="spam-line" d="M6,96 C44,83 54,18 80,20 C92,21 101,39 110,58"></path>
+                        <path class="ham-line" d="M110,58 C123,80 142,86 174,88"></path>
+                    </svg>
+                    <div class="gauge-labels"><span>Spam</span><span>Ham</span></div>
+                </div>
+            </div>
+
+            <div class="cta">
+                <button id="tryBtn" type="button">Try It Now</button>
+            </div>
+            <div id="status" class="status">Using model/spam_model.pkl and model/tfidf.pkl through the API.</div>
+        </section>
+
+        <aside class="panel analysis-panel">
+            <p class="section-title">Sample Email Analysis</p>
+            <div id="sampleText" class="sample"><strong>You won</strong> a free ticket!</div>
+
+            <div class="signal" aria-hidden="true">
+                <div class="signal-line"></div>
+                <div class="signal-line"></div>
+                <div class="signal-line"></div>
+                <div class="signal-line"></div>
+            </div>
+
+            <div id="snippet" class="snippet">Model output will appear here after classification.</div>
+
+            <div class="confidence">
+                <div class="metric-label">Confidence level</div>
+                <div class="track"><div id="confidenceFill" class="fill spam"></div></div>
+                <div id="confidenceDecimal" class="confidence-value">0.00</div>
+            </div>
+        </aside>
+    </section>
+    <footer class="footer">Designed by Malkit CHoudhary</footer>
+</main>
 
 <script>
-async function checkSpam() {
-    const text = document.getElementById("emailText").value;
-    const result = document.getElementById("result");
+const emailText = document.getElementById("emailText");
+const classifyBtn = document.getElementById("classifyBtn");
+const tryBtn = document.getElementById("tryBtn");
+const statusBox = document.getElementById("status");
+const hamFill = document.getElementById("hamFill");
+const spamFill = document.getElementById("spamFill");
+const hamValue = document.getElementById("hamValue");
+const spamValue = document.getElementById("spamValue");
+const predictionText = document.getElementById("predictionText");
+const confidenceText = document.getElementById("confidenceText");
+const confidenceFill = document.getElementById("confidenceFill");
+const confidenceDecimal = document.getElementById("confidenceDecimal");
+const sampleText = document.getElementById("sampleText");
+const snippet = document.getElementById("snippet");
+const API_URL = window.location.protocol === "file:"
+    ? "http://127.0.0.1:8000/predict"
+    : "/predict";
 
-    if (!text.trim()) {
-        result.innerText = "❌ Please enter text";
-        result.style.color = "red";
+function setLoading(isLoading) {
+    classifyBtn.disabled = isLoading;
+    tryBtn.disabled = isLoading;
+    classifyBtn.textContent = isLoading ? "Checking" : "Classify";
+}
+
+function setStatus(message, isError) {
+    statusBox.textContent = message;
+    statusBox.classList.toggle("error", Boolean(isError));
+}
+
+function updateBars(spamProbability, prediction) {
+    const spamPercent = Math.round(spamProbability * 100);
+    const hamPercent = 100 - spamPercent;
+    const confidence = Math.max(spamProbability, 1 - spamProbability);
+    const confidencePercent = Math.round(confidence * 100);
+    const isSpam = prediction === "SPAM";
+
+    spamFill.style.width = spamPercent + "%";
+    hamFill.style.width = hamPercent + "%";
+    confidenceFill.style.width = confidencePercent + "%";
+    confidenceFill.className = "fill " + (isSpam ? "spam" : "ham");
+
+    spamValue.textContent = spamPercent;
+    hamValue.textContent = hamPercent;
+    predictionText.textContent = prediction;
+    predictionText.classList.toggle("spam", isSpam);
+    confidenceText.textContent = confidencePercent + "%";
+    confidenceDecimal.textContent = confidence.toFixed(2);
+}
+
+function updatePreview(text, prediction, spamProbability) {
+    const escaped = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    const firstWords = escaped.split(/\s+/).slice(0, 2).join(" ");
+    const rest = escaped.split(/\s+/).slice(2).join(" ");
+
+    sampleText.innerHTML = firstWords
+        ? "<strong>" + firstWords + "</strong> " + rest
+        : "No sample selected.";
+    snippet.textContent = "Prediction: " + prediction + " | Spam probability from PKL model: " + spamProbability.toFixed(2);
+}
+
+async function checkSpam() {
+    const text = emailText.value.trim();
+
+    if (!text) {
+        setStatus("Please enter email text first.", true);
         return;
     }
 
-    result.innerText = "⏳ Checking...";
-    result.style.color = "black";
+    setLoading(true);
+    setStatus("Checking with saved PKL model...");
 
     try {
-        const res = await fetch("/predict", {
+        const res = await fetch(API_URL, {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ text })
         });
-
         const data = await res.json();
 
-        if (data.prediction === "SPAM") {
-            result.innerText = `🚨 SPAM (${data.spam_probability})`;
-            result.style.color = "red";
-        } else {
-            result.innerText = `✅ NOT SPAM (${data.spam_probability})`;
-            result.style.color = "green";
+        if (!res.ok) {
+            throw new Error(data.error || "Server error");
         }
 
-    } catch {
-        result.innerText = "❌ Server error";
-        result.style.color = "red";
+        const spamProbability = Number(data.spam_probability);
+        updateBars(spamProbability, data.prediction);
+        updatePreview(text, data.prediction, spamProbability);
+        setStatus("Result generated by model/spam_model.pkl with model/tfidf.pkl.");
+    } catch (error) {
+        setStatus("Failed to fetch. Start FastAPI, then open http://127.0.0.1:8000/.", true);
+    } finally {
+        setLoading(false);
     }
 }
+
+classifyBtn.addEventListener("click", checkSpam);
+tryBtn.addEventListener("click", checkSpam);
+emailText.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        checkSpam();
+    }
+});
 </script>
 </body>
 </html>
